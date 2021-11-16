@@ -1,0 +1,33 @@
+pvcreate /dev/mapper/3600a0980383144684b2b50743141436e
+pvcreate /dev/mapper/3600a0980383144684b2b50743141436f
+pvcreate /dev/mapper/3600a0980383144684b2b50743141436c
+pvcreate /dev/mapper/3600a0980383144684b2b50743141436d
+pvcreate /dev/mapper/3600a098038314453783f50743068734a
+pvcreate /dev/mapper/3600a098038314453783f50743068734b
+pvcreate /dev/mapper/3600a098038314453783f50743068734c
+pvcreate /dev/mapper/3600a098038314453783f507430687349
+pvcreate /dev/mapper/3600a0980383144684b2b507431414369
+
+vgcreate hanalogvg /dev/mapper/3600a0980383144684b2b50743141436e /dev/mapper/3600a0980383144684b2b50743141436f /dev/mapper/3600a0980383144684b2b50743141436c /dev/mapper/3600a0980383144684b2b50743141436d
+vgcreate hanadatavg /dev/mapper/3600a098038314453783f50743068734a /dev/mapper/3600a098038314453783f50743068734b /dev/mapper/3600a098038314453783f50743068734c /dev/mapper/3600a098038314453783f507430687349
+vgcreate hanasharedvg /dev/mapper/3600a0980383144684b2b507431414369
+
+lvcreate --name log --stripes 4 --stripesize 64 --extents 100%FREE hanalogvg
+lvcreate --name data --stripes 4 --stripesize 64 --extents 100%FREE hanadatavg
+lvcreate --name shared --extents 100%FREE hanasharedvg
+
+mkfs.xfs -f /dev/mapper/hanalogvg-log
+mkfs.xfs -f /dev/mapper/hanadatavg-data
+mkfs.xfs -f /dev/mapper/hanasharedvg-shared
+
+mkdir -p /hana/log
+mkdir -p /hana/data
+mkdir -p /hana/shared
+
+mount -o defaults,nofail,logbsize=256k,noatime,nodiratime /dev/mapper/hanalogvg-log /hana/log
+mount -o defaults,nofail,logbsize=256k,noatime,nodiratime /dev/mapper/hanadatavg-data /hana/data
+mount -o defaults /dev/mapper/hanasharedvg-shared /hana/shared
+
+grep hanalog /etc/mtab >> /etc/fstab
+grep hanadata /etc/mtab >> /etc/fstab
+grep hanashared /etc/mtab >> /etc/fstab
